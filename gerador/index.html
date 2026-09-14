@@ -319,7 +319,7 @@
       useCORS: true
     }).then(function(canvas){
       canvas.toBlob(function(blob){
-        const nomeCliente = ($('inpCliente').value.trim() || 'proposta').toLowerCase().replace(/[^a-z0-9]+/g, '').replace(/^+|_+$/g, '');
+        const nomeCliente = ($('inpCliente').value.trim() || 'proposta').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = 'proposta_' + nomeCliente + '.png';
