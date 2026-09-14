@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Proposta — Crédito Consignado</title>
+<script src="html2canvas.min.js"></script>
+<style>
+  :root{
+    --bg:            #0d0c0a;
+    --painel:        #17150f;
+    --painel-alto:   #1d1a12;
+    --borda:         #2c2820;
+    --borda-forte:   #3a3426;
+    --ouro:          #c9a04a;
+    --ouro-claro:    #e8c878;
+    --ouro-fraco:    rgba(201,160,74,0.12);
+    --texto:         #f1ece0;
+    --texto-fraco:   #a89f8c;
+    --texto-fraquissimo: #6f6858;
+    --fonte-titulo:  ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --fonte-corpo:   -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --fonte-mono:    ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; background:var(--bg); color:var(--texto); font-family:var(--fonte-corpo); -webkit-font-smoothing:antialiased; }
+  body{ min-height:100vh; padding:40px 20px 80px; }
+  .pagina{ max-width:1080px; margin:0 auto; }
+
+  header.topo{ margin-bottom:30px; }
+  header.topo .marca{ font-size:12px; letter-spacing:.03em; color:var(--ouro); margin-bottom:8px; font-weight:600; }
+  h1{ font-family:var(--fonte-titulo); font-weight:600; font-size:30px; margin:0 0 6px; }
+  .subtitulo{ font-size:14px; color:var(--texto-fraco); margin:0; max-width:52ch; }
+
+  .layout{ display:grid; grid-template-columns: 1fr; gap:28px; }
+  @media (min-width: 900px){ .layout{ grid-template-columns: 380px 1fr; align-items:start; } }
+
+  .painel{ background:var(--painel); border:1px solid var(--borda); border-radius:14px; padding:24px; }
+  .campo{ margin-bottom:16px; }
+  .campo label{ display:block; font-size:12.5px; color:var(--texto-fraco); font-weight:500; margin-bottom:6px; }
+  .campo input, .campo select{
+    width:100%; background:var(--painel-alto); border:1px solid var(--borda-forte); border-radius:8px;
+    color:var(--texto); font-family:inherit; font-size:14px; padding:10px 12px; outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .campo input:focus, .campo select:focus{ border-color:var(--ouro); box-shadow:0 0 0 3px var(--ouro-fraco); }
+  .campo-linha{ display:flex; gap:10px; }
+  .campo-linha .campo{ flex:1; }
+
+  .botao{
+    font-family:inherit; font-size:14px; font-weight:600; padding:12px 20px; border-radius:8px;
+    border:1px solid transparent; cursor:pointer; transition:all .15s ease; width:100%;
+    background:var(--ouro); color:#221a08;
+  }
+  .botao:hover{ background:var(--ouro-claro); }
+  .botao:active{ transform:scale(.98); }
+  .botao:disabled{ background:#4a4222; color:#8a7f5c; cursor:not-allowed; }
+
+  .aviso-ok{ margin-top:12px; font-size:12.5px; color:#7fae72; text-align:center; }
+
+  /* ===== Preview / cartão da proposta (o que vira imagem) ===== */
+  .preview-wrap{ display:flex; justify-content:center; }
+  #proposta{
+    width:100%; max-width:520px; background:#0b0a08; border-radius:16px; overflow:hidden;
+    border:1px solid #33291a; font-family: var(--fonte-corpo);
+  }
+  .prop-header{
+    background: linear-gradient(135deg, #14110a, #1c170d);
+    padding:26px 26px 22px; display:flex; align-items:center; gap:16px;
+    border-bottom:1px solid #33291a;
+  }
+  .prop-logo{
+    width:56px; height:56px; border-radius:50%; flex-shrink:0;
+    border:2px solid var(--ouro); display:flex; align-items:center; justify-content:center;
+    font-family:var(--fonte-titulo); font-weight:700; font-size:20px; color:var(--ouro);
+    background:#0d0c0a;
+  }
+  .prop-header-texto .prop-empresa{ font-family:var(--fonte-titulo); font-weight:700; font-size:19px; color:var(--ouro-claro); line-height:1.2; }
+  .prop-header-texto .prop-sub{ font-size:12px; color:var(--texto-fraco); margin-top:4px; letter-spacing:.01em; }
+
+  .prop-banner{
+    background: linear-gradient(90deg, #b8862f, #d9ab52);
+    color:#211705; font-weight:700; font-size:14px; letter-spacing:.03em;
+    padding:11px 26px;
+  }
+
+  .prop-corpo{ padding:24px 26px 22px; }
+  .prop-linha-campos{ display:flex; justify-content:space-between; gap:10px; margin-bottom:16px; }
+  .prop-campo{ flex:1; }
+  .prop-campo .rotulo{ font-size:10.5px; letter-spacing:.04em; color:var(--texto-fraquissimo); text-transform:uppercase; }
+  .prop-campo .valor{ font-size:14.5px; font-weight:700; color:var(--texto); margin-top:3px; }
+
+  .prop-divisor{ border-top:1px dashed #33291a; margin:16px 0; }
+
+  .prop-valores{ display:flex; justify-content:space-between; gap:16px; margin-bottom:18px; }
+  .prop-valor-bloco .rotulo{ font-size:11px; letter-spacing:.03em; color:var(--texto-fraco); text-transform:uppercase; }
+  .prop-valor-bloco .valor{ font-family:var(--fonte-titulo); font-weight:700; font-size:24px; color:var(--ouro-claro); margin-top:4px; }
+
+  .prop-cliente{
+    background:var(--painel-alto); border:1px solid var(--borda); border-radius:10px;
+    padding:12px 14px; margin-bottom:18px;
+  }
+  .prop-cliente .rotulo{ font-size:10.5px; letter-spacing:.04em; color:var(--texto-fraquissimo); text-transform:uppercase; }
+  .prop-cliente .valor{ font-size:15px; font-weight:600; color:var(--texto); margin-top:3px; }
+
+  .prop-rodape{ display:flex; justify-content:space-between; align-items:flex-end; padding-top:6px; border-top:1px solid #241f14; }
+  .prop-rodape .consultor{ font-size:12.5px; color:var(--texto-fraco); }
+  .prop-rodape .data{ font-size:12.5px; color:var(--texto-fraquissimo); }
+
+  @media (max-width:560px){
+    body{ padding:28px 14px 60px; }
+    h1{ font-size:24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="pagina">
+  <header class="topo">
+    <div class="marca">Credibilita Financeira</div>
+    <h1>Gerador de Proposta</h1>
+    <p class="subtitulo">Preencha os dados da proposta e baixe a imagem prontinha pra mandar no WhatsApp.</p>
+  </header>
+
+  <div class="layout">
+
+    <div class="painel">
+      <div class="campo">
+        <label for="inpEmpresa">Nome da empresa</label>
+        <input type="text" id="inpEmpresa" value="CREDIBILITA FINANCEIRA">
+      </div>
+
+      <div class="campo">
+        <label for="inpCliente">Nome do cliente</label>
+        <input type="text" id="inpCliente" placeholder="Ex: Maria da Silva">
+      </div>
+
+      <div class="campo-linha">
+        <div class="campo">
+          <label for="inpOrgao">Órgão</label>
+          <input type="text" id="inpOrgao" value="INSS">
+        </div>
+        <div class="campo">
+          <label for="inpTabela">Tabela</label>
+          <input type="text" id="inpTabela" value="SEM SEGURO">
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="inpParcelaMes">Primeira parcela em</label>
+        <select id="inpParcelaMes">
+          <option>Janeiro</option><option>Fevereiro</option><option>Março</option><option>Abril</option>
+          <option>Maio</option><option>Junho</option><option>Julho</option><option>Agosto</option>
+          <option>Setembro</option><option>Outubro</option><option>Novembro</option><option>Dezembro</option>
+        </select>
+      </div>
+
+      <div class="campo-linha">
+        <div class="campo">
+          <label for="inpParcela">Valor da parcela (R$)</label>
+          <input type="text" id="inpParcela" inputmode="decimal" placeholder="0,00">
+        </div>
+        <div class="campo">
+          <label for="inpTotal">Total liberado (R$)</label>
+          <input type="text" id="inpTotal" inputmode="decimal" placeholder="0,00">
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="inpConsultor">Nome do consultor(a)</label>
+        <input type="text" id="inpConsultor" placeholder="Ex: Cristina - Consultora Financeira">
+      </div>
+
+      <div class="campo">
+        <label for="inpData">Data da proposta</label>
+        <input type="date" id="inpData">
+      </div>
+
+      <button class="botao" id="btnBaixar">Baixar imagem da proposta</button>
+      <div class="aviso-ok" id="avisoOk" style="display:none">✓ Imagem baixada!</div>
+    </div>
+
+    <div class="preview-wrap">
+      <div id="proposta">
+        <div class="prop-header">
+          <div class="prop-logo" id="pLogo">GC</div>
+          <div class="prop-header-texto">
+            <div class="prop-empresa" id="pEmpresa">CREDIBILITA FINANCEIRA</div>
+            <div class="prop-sub">Confira abaixo os detalhes da sua proposta</div>
+          </div>
+        </div>
+
+        <div class="prop-banner">CRÉDITO CONSIGNADO</div>
+
+        <div class="prop-corpo">
+          <div class="prop-linha-campos">
+            <div class="prop-campo">
+              <div class="rotulo">Órgão</div>
+              <div class="valor" id="pOrgao">INSS</div>
+            </div>
+            <div class="prop-campo">
+              <div class="rotulo">Tabela</div>
+              <div class="valor" id="pTabela">SEM SEGURO</div>
+            </div>
+            <div class="prop-campo" style="text-align:right">
+              <div class="rotulo">1ª parcela em</div>
+              <div class="valor" id="pParcelaMes">—</div>
+            </div>
+          </div>
+
+          <div class="prop-divisor"></div>
+
+          <div class="prop-valores">
+            <div class="prop-valor-bloco">
+              <div class="rotulo">Valor da parcela</div>
+              <div class="valor" id="pParcela">R$ 0,00</div>
+            </div>
+            <div class="prop-valor-bloco" style="text-align:right">
+              <div class="rotulo">Total do valor liberado</div>
+              <div class="valor" id="pTotal">R$ 0,00</div>
+            </div>
+          </div>
+
+          <div class="prop-cliente">
+            <div class="rotulo">Cliente</div>
+            <div class="valor" id="pCliente">—</div>
+          </div>
+
+          <div class="prop-rodape">
+            <div class="consultor" id="pConsultor">—</div>
+            <div class="data" id="pData">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+
+  function hojeISO(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  $('inpData').value = hojeISO();
+  $('inpParcelaMes').value = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][new Date().getMonth()];
+
+  function formatarMoedaDigitado(valorBruto){
+    const digitos = (valorBruto || '').replace(/\D/g, '');
+    if(!digitos) return { exibicao: '', numero: 0 };
+    const numero = Number(digitos) / 100;
+    const exibicao = numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return { exibicao, numero };
+  }
+
+  function ligarCampoMoeda(id){
+    const el = $(id);
+    el.addEventListener('input', function(){
+      const { exibicao } = formatarMoedaDigitado(el.value);
+      el.value = exibicao;
+      atualizarPreview();
+    });
+  }
+  ligarCampoMoeda('inpParcela');
+  ligarCampoMoeda('inpTotal');
+
+  function iniciaisEmpresa(nome){
+    const palavras = (nome || '').trim().split(/\s+/).filter(Boolean);
+    if(palavras.length === 0) return 'GC';
+    if(palavras.length === 1) return palavras[0].slice(0,2).toUpperCase();
+    return (palavras[0][0] + palavras[1][0]).toUpperCase();
+  }
+
+  function formatarDataBR(iso){
+    if(!iso) return '—';
+    const [ano, mes, dia] = iso.split('-');
+    return dia + '/' + mes + '/' + ano;
+  }
+
+  function atualizarPreview(){
+    const empresa = $('inpEmpresa').value.trim() || 'CREDIBILITA FINANCEIRA';
+    $('pEmpresa').textContent = empresa;
+    $('pLogo').textContent = iniciaisEmpresa(empresa);
+
+    $('pOrgao').textContent = $('inpOrgao').value.trim() || '—';
+    $('pTabela').textContent = $('inpTabela').value.trim() || '—';
+    $('pParcelaMes').textContent = $('inpParcelaMes').value;
+
+    const parcela = $('inpParcela').value.trim();
+    const total = $('inpTotal').value.trim();
+    $('pParcela').textContent = 'R$ ' + (parcela || '0,00');
+    $('pTotal').textContent = 'R$ ' + (total || '0,00');
+
+    $('pCliente').textContent = $('inpCliente').value.trim() || '—';
+    $('pConsultor').textContent = $('inpConsultor').value.trim() || '—';
+    $('pData').textContent = formatarDataBR($('inpData').value);
+  }
+
+  ['inpEmpresa','inpCliente','inpOrgao','inpTabela','inpParcelaMes','inpConsultor','inpData'].forEach(function(id){
+    $(id).addEventListener('input', atualizarPreview);
+    $(id).addEventListener('change', atualizarPreview);
+  });
+
+  atualizarPreview();
+
+  $('btnBaixar').addEventListener('click', function(){
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Gerando imagem...';
+
+    html2canvas(document.getElementById('proposta'), {
+      backgroundColor: '#0b0a08',
+      scale: 2,
+      useCORS: true
+    }).then(function(canvas){
+      canvas.toBlob(function(blob){
+        const nomeCliente = ($('inpCliente').value.trim() || 'proposta').toLowerCase().replace(/[^a-z0-9]+/g, '').replace(/^+|_+$/g, '');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'proposta_' + nomeCliente + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        btn.disabled = false;
+        btn.textContent = 'Baixar imagem da proposta';
+        const aviso = $('avisoOk');
+        aviso.style.display = 'block';
+        setTimeout(function(){ aviso.style.display = 'none'; }, 2500);
+      }, 'image/png');
+    }).catch(function(erro){
+      console.error('Erro ao gerar imagem:', erro);
+      btn.disabled = false;
+      btn.textContent = 'Baixar imagem da proposta';
+      alert('Não foi possível gerar a imagem. Tente novamente.');
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
